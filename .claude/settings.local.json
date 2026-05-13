@@ -1,0 +1,24 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__plugin_ecc_github__create_repository",
+      "Bash(gh repo *)",
+      "Bash(mvn dependency:sources -q)",
+      "Bash(cd /tmp)",
+      "Bash(jar tf *)",
+      "Bash(grep \"\\\\.java$\")",
+      "Bash(jar xf *)",
+      "Read(//tmp/org/itsallcode/openfasttrace/api/importer/**)",
+      "Bash(mvn dependency:sources -f \"E:\\\\Dev\\\\bachelor\\\\openfasttrace-language-server\\\\pom.xml\" -q)",
+      "Read(//tmp/org/itsallcode/openfasttrace/core/**)",
+      "Bash(mkdir -p \"E:\\\\Dev\\\\bachelor\\\\openfasttrace-language-server\\\\src\\\\main\\\\java\\\\org\\\\itsallcode\\\\openfasttrace\\\\lsp\\\\index\")",
+      "Bash(mkdir -p \"E:\\\\Dev\\\\bachelor\\\\openfasttrace-language-server\\\\src\\\\test\\\\java\\\\org\\\\itsallcode\\\\openfasttrace\\\\lsp\\\\index\")",
+      "Bash(mkdir -p \"E:\\\\Dev\\\\bachelor\\\\openfasttrace-language-server\\\\src\\\\test\\\\resources\\\\testworkspace\")",
+      "Bash(mvn compile *)",
+      "Bash(mvn test *)",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)",
+      "Bash(git push *)"
+    ]
+  }
+}

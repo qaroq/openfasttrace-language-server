@@ -17,7 +17,7 @@ public final class OftWorkspaceIndex {
     private final Map<SpecificationItemId, SpecificationItem> specItems;
     private final Map<SpecificationItemId, List<SpecificationItem>> coverageBySpecId;
 
-    OftWorkspaceIndex(final List<SpecificationItem> items) {
+    public OftWorkspaceIndex(final List<SpecificationItem> items) {
         final Map<SpecificationItemId, SpecificationItem> specMap = new LinkedHashMap<>();
         final Map<SpecificationItemId, List<SpecificationItem>> coverMap = new LinkedHashMap<>();
 
