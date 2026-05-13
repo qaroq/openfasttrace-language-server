@@ -8,7 +8,9 @@ import java.nio.file.Path;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
@@ -42,12 +44,19 @@ public class OftTextDocumentService implements TextDocumentService {
 
     private LanguageClient client;
     private volatile OftWorkspaceIndex index = OftWorkspaceIndex.empty();
+    private final Set<String> openUris = ConcurrentHashMap.newKeySet();
+    private Runnable onSaveCallback = null;
 
     private final DiagnosticsProvider diagnosticsProvider = new DiagnosticsProvider();
     private final QuickFixProvider quickFixProvider = new QuickFixProvider();
 
+    void setOnSaveCallback(final Runnable callback) {
+        this.onSaveCallback = callback;
+    }
+
     void updateIndex(final OftWorkspaceIndex index) {
         this.index = index;
+        openUris.forEach(this::publishDiagnostics);
     }
 
     void connect(final LanguageClient client) {
@@ -160,7 +169,12 @@ public class OftTextDocumentService implements TextDocumentService {
     public void didSave(final DidSaveTextDocumentParams params) {
         final String uri = params.getTextDocument().getUri();
         LOG.fine("didSave: " + uri);
-        publishDiagnostics(uri);
+        if (onSaveCallback != null) {
+            // Rebuild runs async; updateIndex() will re-publish all open files.
+            CompletableFuture.runAsync(onSaveCallback);
+        } else {
+            publishDiagnostics(uri);
+        }
     }
 
     void publishDiagnosticsForUri(final String uri) {
@@ -180,6 +194,7 @@ public class OftTextDocumentService implements TextDocumentService {
     public void didOpen(final DidOpenTextDocumentParams params) {
         final String uri = params.getTextDocument().getUri();
         LOG.fine("didOpen: " + uri);
+        openUris.add(uri);
         publishDiagnostics(uri);
     }
 
@@ -190,7 +205,9 @@ public class OftTextDocumentService implements TextDocumentService {
 
     @Override
     public void didClose(final DidCloseTextDocumentParams params) {
-        LOG.fine("didClose: " + params.getTextDocument().getUri());
+        final String uri = params.getTextDocument().getUri();
+        LOG.fine("didClose: " + uri);
+        openUris.remove(uri);
     }
 
     private static String uriToPath(final String uri) {

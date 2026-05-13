@@ -65,6 +65,16 @@ internal class OftLspServerDescriptor(project: Project) :
             "openfasttrace-language-server-.*-standalone\\.jar"
         )
 
-        fun isSupportedFile(file: VirtualFile): Boolean = file.extension == "md"
+        private val SUPPORTED_EXTENSIONS = setOf(
+            "md",
+            "java", "kt", "kts",
+            "c", "cpp", "cc", "cxx", "h", "hpp",
+            "py",
+            "js", "ts",
+            "rb", "go", "rs", "cs",
+        )
+
+        fun isSupportedFile(file: VirtualFile): Boolean =
+            file.extension in SUPPORTED_EXTENSIONS
     }
 }

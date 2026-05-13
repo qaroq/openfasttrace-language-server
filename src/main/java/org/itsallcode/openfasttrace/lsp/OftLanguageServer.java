@@ -62,6 +62,14 @@ public class OftLanguageServer implements LanguageServer, LanguageClientAware {
             LOG.warning("No rootUri available, skipping index");
             return;
         }
+        textDocumentService.setOnSaveCallback(this::rebuildIndex);
+        rebuildIndex();
+    }
+
+    private void rebuildIndex() {
+        if (rootUri == null) {
+            return;
+        }
         final Path workspaceRoot = Path.of(URI.create(rootUri));
         final OftWorkspaceIndex index = indexer.buildIndex(workspaceRoot);
         textDocumentService.updateIndex(index);
