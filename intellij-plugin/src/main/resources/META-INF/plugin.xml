@@ -1,0 +1,23 @@
+<idea-plugin>
+    <id>org.itsallcode.openfasttrace.lsp</id>
+    <name>OpenFastTrace Language Server</name>
+    <vendor>Felix Gorke</vendor>
+    <description><![CDATA[
+        LSP server integration for OpenFastTrace requirement tracing files.<br/>
+        <ul>
+            <li>Hover over a coverage tag to see the referenced spec item's title and description</li>
+            <li>Go to Definition on a coverage tag jumps to the spec item definition</li>
+            <li>Go to Definition on a spec item ID shows all coverage tags</li>
+            <li>Find References on a spec item lists all coverage tags</li>
+            <li>Warnings for outdated coverage tag revisions with a quick fix to update them</li>
+        </ul>
+    ]]></description>
+
+    <depends>com.intellij.modules.platform</depends>
+    <depends>com.intellij.modules.lsp</depends>
+
+    <extensions defaultExtensionNs="com.intellij">
+        <platform.lsp.serverSupportProvider
+                implementation="org.itsallcode.openfasttrace.lsp.intellij.OftLspServerSupportProvider"/>
+    </extensions>
+</idea-plugin>
