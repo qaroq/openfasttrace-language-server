@@ -9,6 +9,7 @@ import org.eclipse.lsp4j.DidOpenTextDocumentParams;
 import org.eclipse.lsp4j.DidSaveTextDocumentParams;
 import org.eclipse.lsp4j.services.LanguageClient;
 import org.eclipse.lsp4j.services.TextDocumentService;
+import org.itsallcode.openfasttrace.lsp.index.OftWorkspaceIndex;
 
 public class OftTextDocumentService implements TextDocumentService {
 
@@ -16,6 +17,11 @@ public class OftTextDocumentService implements TextDocumentService {
 
     @SuppressWarnings("unused")
     private LanguageClient client;
+    private volatile OftWorkspaceIndex index = OftWorkspaceIndex.empty();
+
+    void updateIndex(final OftWorkspaceIndex index) {
+        this.index = index;
+    }
 
     void connect(final LanguageClient client) {
         this.client = client;

@@ -7,6 +7,7 @@ import org.eclipse.lsp4j.DidChangeConfigurationParams;
 import org.eclipse.lsp4j.DidChangeWatchedFilesParams;
 import org.eclipse.lsp4j.services.LanguageClient;
 import org.eclipse.lsp4j.services.WorkspaceService;
+import org.itsallcode.openfasttrace.lsp.index.OftWorkspaceIndex;
 
 public class OftWorkspaceService implements WorkspaceService {
 
@@ -14,6 +15,11 @@ public class OftWorkspaceService implements WorkspaceService {
 
     @SuppressWarnings("unused")
     private LanguageClient client;
+    private volatile OftWorkspaceIndex index = OftWorkspaceIndex.empty();
+
+    void updateIndex(final OftWorkspaceIndex index) {
+        this.index = index;
+    }
 
     void connect(final LanguageClient client) {
         this.client = client;
