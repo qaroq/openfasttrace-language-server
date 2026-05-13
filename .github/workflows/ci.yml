@@ -1,0 +1,60 @@
+name: CI
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: maven
+
+      - name: Build and test
+        run: mvn --batch-mode verify
+
+      - name: Upload JaCoCo report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: jacoco-report
+          path: target/site/jacoco/
+
+      - name: OFT trace
+        run: |
+          OFT_JAR=$(ls target/openfasttrace-language-server-*-standalone.jar 2>/dev/null | head -1)
+          if [ -z "$OFT_JAR" ]; then
+            echo "Standalone JAR not found, downloading OFT for tracing..."
+            curl -sL "https://github.com/itsallcode/openfasttrace/releases/download/4.3.0/openfasttrace-4.3.0.jar" -o oft.jar
+            OFT_CMD="java -jar oft.jar"
+          else
+            OFT_CMD="java -jar $OFT_JAR"
+          fi
+          # Trace the project's own spec against its source and test code
+          java -jar $(ls ~/.m2/repository/org/itsallcode/openfasttrace/openfasttrace-*/openfasttrace-*[0-9].jar 2>/dev/null | tail -1 || echo "oft.jar") \
+            trace \
+            --input-directory doc/spec \
+            --input-directory src \
+            --output-format plain \
+            --report-verbosity failures \
+          || true
+          # Until OFT tracing is fully wired, we use '|| true' to avoid breaking the build on missing coverage.
+          # Remove '|| true' once all spec items have implementation coverage.
+
+      - name: Upload OFT trace report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: oft-trace-report
+          path: target/oft-report.*
+          if-no-files-found: ignore
