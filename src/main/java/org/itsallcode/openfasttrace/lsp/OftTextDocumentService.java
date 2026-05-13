@@ -12,17 +12,22 @@ import java.util.concurrent.CompletableFuture;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
+import org.eclipse.lsp4j.CodeAction;
+import org.eclipse.lsp4j.CodeActionParams;
+import org.eclipse.lsp4j.Command;
 import org.eclipse.lsp4j.DefinitionParams;
+import org.eclipse.lsp4j.Diagnostic;
+import org.eclipse.lsp4j.DidChangeTextDocumentParams;
+import org.eclipse.lsp4j.DidCloseTextDocumentParams;
+import org.eclipse.lsp4j.DidOpenTextDocumentParams;
+import org.eclipse.lsp4j.DidSaveTextDocumentParams;
 import org.eclipse.lsp4j.Hover;
 import org.eclipse.lsp4j.HoverParams;
 import org.eclipse.lsp4j.Location;
 import org.eclipse.lsp4j.LocationLink;
 import org.eclipse.lsp4j.MarkupContent;
 import org.eclipse.lsp4j.MarkupKind;
-import org.eclipse.lsp4j.DidChangeTextDocumentParams;
-import org.eclipse.lsp4j.DidCloseTextDocumentParams;
-import org.eclipse.lsp4j.DidOpenTextDocumentParams;
-import org.eclipse.lsp4j.DidSaveTextDocumentParams;
+import org.eclipse.lsp4j.PublishDiagnosticsParams;
 import org.eclipse.lsp4j.jsonrpc.messages.Either;
 import org.eclipse.lsp4j.services.LanguageClient;
 import org.eclipse.lsp4j.services.TextDocumentService;
@@ -35,9 +40,11 @@ public class OftTextDocumentService implements TextDocumentService {
 
     private static final Logger LOG = Logger.getLogger(OftTextDocumentService.class.getName());
 
-    @SuppressWarnings("unused")
     private LanguageClient client;
     private volatile OftWorkspaceIndex index = OftWorkspaceIndex.empty();
+
+    private final DiagnosticsProvider diagnosticsProvider = new DiagnosticsProvider();
+    private final QuickFixProvider quickFixProvider = new QuickFixProvider();
 
     void updateIndex(final OftWorkspaceIndex index) {
         this.index = index;
@@ -100,53 +107,16 @@ public class OftTextDocumentService implements TextDocumentService {
                             .orElse(false);
 
                     if (cursorIsInSpecFile) {
-                        // spec-to-tags: cursor is on the spec item's own ID line
                         return index.findCoverageTags(id).stream()
                                 .map(tag -> LocationConverter.toLspLocation(tag.getLocation()))
                                 .collect(Collectors.toList());
                     }
-                    // tag-to-spec: cursor is on a coverage reference
                     return specItem
                             .map(item -> LocationConverter.toLspLocation(item.getLocation()))
                             .map(List::of)
                             .orElse(Collections.emptyList());
                 })
                 .orElse(Collections.emptyList());
-    }
-
-    private static String uriToPath(final String uri) {
-        try {
-            return Path.of(URI.create(uri)).toString();
-        } catch (final Exception e) {
-            return uri;
-        }
-    }
-
-    private String readLine(final String uri, final int lineIndex) {
-        try {
-            final List<String> lines = Files.readAllLines(Path.of(URI.create(uri)));
-            if (lineIndex >= 0 && lineIndex < lines.size()) {
-                return lines.get(lineIndex);
-            }
-        } catch (final IOException | IllegalArgumentException e) {
-            LOG.fine("Could not read file: " + uri + " — " + e.getMessage());
-        }
-        return "";
-    }
-
-    @Override
-    public void didOpen(final DidOpenTextDocumentParams params) {
-        LOG.fine("didOpen: " + params.getTextDocument().getUri());
-    }
-
-    @Override
-    public void didChange(final DidChangeTextDocumentParams params) {
-        // Index is not refreshed on every keystroke (ADR-0006).
-    }
-
-    @Override
-    public void didClose(final DidCloseTextDocumentParams params) {
-        LOG.fine("didClose: " + params.getTextDocument().getUri());
     }
 
     // [impl->req~find-references-covering-tags~1]
@@ -171,10 +141,80 @@ public class OftTextDocumentService implements TextDocumentService {
                 .orElse(Collections.emptyList());
     }
 
+    // [impl->req~diagnostic-outdated-version~1]
+    // [impl->req~quickfix-updates-version~1]
+    @Override
+    public CompletableFuture<List<Either<Command, CodeAction>>> codeAction(
+            final CodeActionParams params) {
+        final String uri = params.getTextDocument().getUri();
+        return CompletableFuture.supplyAsync(() -> params.getContext().getDiagnostics().stream()
+                .filter(d -> "openfasttrace-lsp".equals(d.getSource()))
+                .flatMap(d -> quickFixProvider
+                        .quickFixesForDiagnostic(d, uri, index).stream())
+                .map(action -> Either.<Command, CodeAction>forRight(action))
+                .collect(Collectors.toList()));
+    }
+
     // [impl->req~index-refresh-on-save~1]
     @Override
     public void didSave(final DidSaveTextDocumentParams params) {
-        LOG.fine("didSave: " + params.getTextDocument().getUri());
-        // TODO Phase 2: trigger debounced re-index
+        final String uri = params.getTextDocument().getUri();
+        LOG.fine("didSave: " + uri);
+        publishDiagnostics(uri);
+    }
+
+    void publishDiagnosticsForUri(final String uri) {
+        publishDiagnostics(uri);
+    }
+
+    private void publishDiagnostics(final String uri) {
+        if (client == null) {
+            return;
+        }
+        final List<String> lines = readAllLines(uri);
+        final List<Diagnostic> diagnostics = diagnosticsProvider.diagnoseLines(lines, index);
+        client.publishDiagnostics(new PublishDiagnosticsParams(uri, diagnostics));
+    }
+
+    @Override
+    public void didOpen(final DidOpenTextDocumentParams params) {
+        final String uri = params.getTextDocument().getUri();
+        LOG.fine("didOpen: " + uri);
+        publishDiagnostics(uri);
+    }
+
+    @Override
+    public void didChange(final DidChangeTextDocumentParams params) {
+        // Index is not refreshed on every keystroke (ADR-0006).
+    }
+
+    @Override
+    public void didClose(final DidCloseTextDocumentParams params) {
+        LOG.fine("didClose: " + params.getTextDocument().getUri());
+    }
+
+    private static String uriToPath(final String uri) {
+        try {
+            return Path.of(URI.create(uri)).toString();
+        } catch (final Exception e) {
+            return uri;
+        }
+    }
+
+    private String readLine(final String uri, final int lineIndex) {
+        final List<String> lines = readAllLines(uri);
+        if (lineIndex >= 0 && lineIndex < lines.size()) {
+            return lines.get(lineIndex);
+        }
+        return "";
+    }
+
+    private List<String> readAllLines(final String uri) {
+        try {
+            return Files.readAllLines(Path.of(URI.create(uri)));
+        } catch (final IOException | IllegalArgumentException e) {
+            LOG.fine("Could not read file: " + uri + " — " + e.getMessage());
+            return Collections.emptyList();
+        }
     }
 }

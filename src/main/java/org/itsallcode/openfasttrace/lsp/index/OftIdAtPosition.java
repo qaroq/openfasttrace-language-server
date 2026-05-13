@@ -15,7 +15,7 @@ import org.itsallcode.openfasttrace.api.core.SpecificationItemId;
 public final class OftIdAtPosition {
 
     // Matches artifact-type~item-name~revision, e.g. req~my-req~2
-    static final Pattern OFT_ID_PATTERN = Pattern.compile(
+    public static final Pattern OFT_ID_PATTERN = Pattern.compile(
             "[a-zA-Z][a-zA-Z0-9_-]*~[a-zA-Z][a-zA-Z0-9_.-]*~\\d+");
 
     private OftIdAtPosition() {

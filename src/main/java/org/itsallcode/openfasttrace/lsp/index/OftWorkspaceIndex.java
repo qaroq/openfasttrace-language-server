@@ -44,6 +44,18 @@ public final class OftWorkspaceIndex {
         return coverageBySpecId.getOrDefault(id, List.of());
     }
 
+    /**
+     * Finds a spec item by artifact type and name, ignoring revision.
+     * Returns the first match if multiple revisions exist.
+     */
+    public Optional<SpecificationItem> findSpecItemByTypeAndName(
+            final String artifactType, final String name) {
+        return specItems.values().stream()
+                .filter(item -> artifactType.equals(item.getId().getArtifactType())
+                        && name.equals(item.getId().getName()))
+                .findFirst();
+    }
+
     public int specItemCount() {
         return specItems.size();
     }
