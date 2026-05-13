@@ -47,6 +47,7 @@ public class OftLanguageServer implements LanguageServer, LanguageClientAware {
         final var capabilities = new ServerCapabilities();
         capabilities.setHoverProvider(true);
         capabilities.setDefinitionProvider(true);
+        capabilities.setReferencesProvider(true);
 
         final var serverInfo = new ServerInfo("OpenFastTrace Language Server", "0.1.0-SNAPSHOT");
         return CompletableFuture.completedFuture(new InitializeResult(capabilities, serverInfo));

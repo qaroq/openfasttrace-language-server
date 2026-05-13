@@ -149,6 +149,28 @@ public class OftTextDocumentService implements TextDocumentService {
         LOG.fine("didClose: " + params.getTextDocument().getUri());
     }
 
+    // [impl->req~find-references-covering-tags~1]
+    @Override
+    public CompletableFuture<List<? extends Location>> references(
+            final org.eclipse.lsp4j.ReferenceParams params) {
+        final String uri = params.getTextDocument().getUri();
+        final int line = params.getPosition().getLine();
+        final int col = params.getPosition().getCharacter();
+        LOG.fine("references: uri=" + uri + " line=" + line + " col=" + col);
+        return CompletableFuture.supplyAsync(() -> {
+            final String lineText = readLine(uri, line);
+            return referencesForLine(lineText, col);
+        });
+    }
+
+    List<Location> referencesForLine(final String lineText, final int col) {
+        return OftIdAtPosition.findAt(lineText, col)
+                .map(id -> index.findCoverageTags(id).stream()
+                        .map(tag -> LocationConverter.toLspLocation(tag.getLocation()))
+                        .collect(Collectors.toList()))
+                .orElse(Collections.emptyList());
+    }
+
     // [impl->req~index-refresh-on-save~1]
     @Override
     public void didSave(final DidSaveTextDocumentParams params) {
