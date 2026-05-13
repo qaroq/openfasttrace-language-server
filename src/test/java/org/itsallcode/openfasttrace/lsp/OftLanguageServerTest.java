@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import org.eclipse.lsp4j.InitializeParams;
 import org.eclipse.lsp4j.InitializeResult;
+import org.eclipse.lsp4j.TextDocumentSyncOptions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -41,5 +42,17 @@ class OftLanguageServerTest {
     void shutdownCompletesWithoutError() throws Exception {
         final Object result = server.shutdown().get();
         assertThat(result).isNull();
+    }
+
+    @Test
+    void initializeDeclaresTextDocumentSync() throws Exception {
+        final var params = new InitializeParams();
+        final InitializeResult result = server.initialize(params).get();
+
+        final var sync = result.getCapabilities().getTextDocumentSync().getRight();
+        assertThat(sync).isNotNull();
+        assertThat(sync).isInstanceOf(TextDocumentSyncOptions.class);
+        assertThat(sync.getOpenClose()).isTrue();
+        assertThat(sync.getSave()).isNotNull();
     }
 }

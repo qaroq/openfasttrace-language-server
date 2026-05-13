@@ -14,6 +14,10 @@ A requirement for testing purposes.
 
 Needs: impl
 
+Covers:
+
+  - feat~test-feature~1
+
 # Coverage Item
 
 `impl~test-implementation~0`

@@ -9,8 +9,11 @@ import java.util.logging.Logger;
 import org.eclipse.lsp4j.InitializeParams;
 import org.eclipse.lsp4j.InitializeResult;
 import org.eclipse.lsp4j.InitializedParams;
+import org.eclipse.lsp4j.SaveOptions;
 import org.eclipse.lsp4j.ServerCapabilities;
 import org.eclipse.lsp4j.ServerInfo;
+import org.eclipse.lsp4j.TextDocumentSyncKind;
+import org.eclipse.lsp4j.TextDocumentSyncOptions;
 import org.eclipse.lsp4j.services.LanguageClient;
 import org.eclipse.lsp4j.services.LanguageClientAware;
 import org.eclipse.lsp4j.services.LanguageServer;
@@ -44,7 +47,13 @@ public class OftLanguageServer implements LanguageServer, LanguageClientAware {
         this.rootUri = params.getRootUri();
         LOG.info("initialize: rootUri=" + rootUri);
 
+        final var syncOptions = new TextDocumentSyncOptions();
+        syncOptions.setOpenClose(true);
+        syncOptions.setChange(TextDocumentSyncKind.None);
+        syncOptions.setSave(new SaveOptions(false));
+
         final var capabilities = new ServerCapabilities();
+        capabilities.setTextDocumentSync(syncOptions);
         capabilities.setHoverProvider(true);
         capabilities.setDefinitionProvider(true);
         capabilities.setReferencesProvider(true);

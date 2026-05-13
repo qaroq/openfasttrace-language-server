@@ -67,6 +67,26 @@ class OftTextDocumentServiceFindReferencesTest {
         assertThat(result).isEmpty();
     }
 
+    // [utest->req~find-references-covering-tags~1]
+    @Test
+    void references_onFeat_returnsRequirementsThatCoverIt() {
+        // req covers feat — a requirement that says "Covers: feat~my-feature~1"
+        final var feat = specItemAt("feat~my-feature~1", "/workspace/spec.md", 1);
+        final var req = SpecificationItem.builder()
+                .id(SpecificationItemId.parseId("req~my-req~1"))
+                .title("Req")
+                .description("")
+                .location(org.itsallcode.openfasttrace.api.core.Location.create("/workspace/spec.md", 10))
+                .addCoveredId(SpecificationItemId.parseId("feat~my-feature~1"))
+                .build();
+        service.updateIndex(new OftWorkspaceIndex(List.of(feat, req)));
+
+        final var result = service.referencesForLine("`feat~my-feature~1`", 1);
+
+        assertThat(result).hasSize(1);
+        assertThat(result.get(0).getUri()).contains("spec.md");
+    }
+
     private SpecificationItem specItemAt(final String id, final String path, final int line) {
         return SpecificationItem.builder()
                 .id(SpecificationItemId.parseId(id))
